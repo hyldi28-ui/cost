@@ -26,14 +26,20 @@ function applyFilter(records: CostRecord[], filter: FilterState): CostRecord[] {
     // 날짜 범위 필터
     if (!monthInRange(month, primaryRange.start, primaryRange.end)) return false;
 
-    // 계정 필터 (빈 배열 = 전체)
-    if (accounts.length > 0 && !accounts.includes(r.account)) return false;
+    // 계정 필터 (null = 전체, [] = 전체 해제)
+    if (accounts === null) { /* 전체 통과 */ }
+    else if (accounts.length === 0) return false;
+    else if (!accounts.includes(r.account)) return false;
 
     // 플랫폼 필터
-    if (platforms.length > 0 && !platforms.includes(r.platform)) return false;
+    if (platforms === null) { /* 전체 통과 */ }
+    else if (platforms.length === 0) return false;
+    else if (!platforms.includes(r.platform)) return false;
 
     // 카테고리 필터
-    if (categories.length > 0 && !categories.includes(r.category)) return false;
+    if (categories === null) { /* 전체 통과 */ }
+    else if (categories.length === 0) return false;
+    else if (!categories.includes(r.category)) return false;
 
     return true;
   });

@@ -5,6 +5,7 @@ export interface CostRecord {
   platform: string;    // 플랫폼 (예: "네이버")
   category: string;    // 구분 (예: "라이브")
   amount: number;      // 금액 (양수)
+  memo: string;        // 적요
 }
 
 /** CSV 파싱 결과 */
@@ -25,9 +26,9 @@ export interface ParseError {
 export interface FilterState {
   primaryRange: DateRange;
   compareRange: DateRange | null;
-  accounts: string[];    // 빈 배열 = 전체 선택
-  platforms: string[];
-  categories: string[];
+  accounts: string[] | null;    // null = 전체 선택, [] = 전체 해제
+  platforms: string[] | null;
+  categories: string[] | null;
 }
 
 export interface DateRange {

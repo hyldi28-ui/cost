@@ -136,8 +136,8 @@ export default function FilterPanel() {
 interface DropdownMultiSelectProps {
   label: string;
   options: string[];
-  selected: string[];
-  onChange: (selected: string[]) => void;
+  selected: string[] | null;
+  onChange: (selected: string[] | null) => void;
 }
 
 function DropdownMultiSelect({ label, options, selected, onChange }: DropdownMultiSelectProps) {
@@ -153,21 +153,39 @@ function DropdownMultiSelect({ label, options, selected, onChange }: DropdownMul
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const allSelected = selected.length === 0;
+  // null = 전체 선택, [] = 전체 해제, string[] = 일부 선택
+  const isAllSelected = selected === null;
+  const isNoneSelected = Array.isArray(selected) && selected.length === 0;
 
   function toggleAll() {
-    onChange([]);
-  }
-
-  function toggleOption(opt: string) {
-    if (selected.includes(opt)) {
-      onChange(selected.filter((s) => s !== opt));
+    if (isAllSelected) {
+      onChange([]); // 전체 선택 → 전체 해제
     } else {
-      onChange([...selected, opt]);
+      onChange(null); // 전체 해제 or 일부 선택 → 전체 선택
     }
   }
 
-  const displayText = allSelected ? '전체' : `${selected.length}개 선택`;
+  function toggleOption(opt: string) {
+    if (isAllSelected) {
+      // 전체 선택 상태에서 하나 해제 → 나머지만 선택
+      onChange(options.filter((o) => o !== opt));
+    } else if (isNoneSelected) {
+      // 전체 해제 상태에서 하나 선택
+      onChange([opt]);
+    } else {
+      const arr = selected as string[];
+      if (arr.includes(opt)) {
+        const next = arr.filter((s) => s !== opt);
+        onChange(next.length === 0 ? [] : next);
+      } else {
+        const next = [...arr, opt];
+        onChange(next.length === options.length ? null : next);
+      }
+    }
+  }
+
+  const isChecked = (opt: string) => isAllSelected || (Array.isArray(selected) && selected.includes(opt));
+  const displayText = isAllSelected ? '전체' : isNoneSelected ? '선택 없음' : `${(selected as string[]).length}개 선택`;
 
   return (
     <div ref={ref} className="relative flex flex-col gap-1">
@@ -190,7 +208,7 @@ function DropdownMultiSelect({ label, options, selected, onChange }: DropdownMul
           <label className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
             <input
               type="checkbox"
-              checked={allSelected}
+              checked={isAllSelected}
               onChange={toggleAll}
               className="w-4 h-4 accent-blue-500"
             />
@@ -200,7 +218,7 @@ function DropdownMultiSelect({ label, options, selected, onChange }: DropdownMul
             <label key={opt} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
               <input
                 type="checkbox"
-                checked={selected.includes(opt)}
+                checked={isChecked(opt)}
                 onChange={() => toggleOption(opt)}
                 className="w-4 h-4 accent-blue-500"
               />

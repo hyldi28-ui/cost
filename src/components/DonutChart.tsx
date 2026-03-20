@@ -17,6 +17,7 @@ const COLORS = [
 
 interface DonutChartProps {
   data: DonutSegment[];
+  title?: string;
   onSegmentClick: (dimension: string, value: string) => void;
 }
 
@@ -70,7 +71,7 @@ function CenterLabel({ viewBox, total }: CenterLabelProps) {
   );
 }
 
-const DonutChart: React.FC<DonutChartProps> = ({ data, onSegmentClick }) => {
+const DonutChart: React.FC<DonutChartProps> = ({ data, title, onSegmentClick }) => {
   const total = data.reduce((sum, d) => sum + d.amount, 0);
 
   if (data.length === 0) {
@@ -83,6 +84,9 @@ const DonutChart: React.FC<DonutChartProps> = ({ data, onSegmentClick }) => {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      {title && (
+        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2 text-center">{title}</p>
+      )}
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie

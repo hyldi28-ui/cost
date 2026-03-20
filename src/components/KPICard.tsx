@@ -3,9 +3,11 @@ import React from 'react';
 interface KPICardProps {
   label: string;
   primaryValue: number;
-  compareValue?: number;
   momRate?: number | null;
-  yoyRate?: number | null;
+  /** 비교 카드 전용 props */
+  isCompareCard?: boolean;
+  compareValue?: number;   // 비교 기간 총 비용 (비교 카드에서 primaryValue가 비교값)
+  primaryTotal?: number;   // 기준 기간 총 비용 (비교 카드에서 차이 계산용)
 }
 
 function formatKRW(value: number): string {
@@ -26,32 +28,36 @@ function rateColor(rate: number): string {
 const KPICard: React.FC<KPICardProps> = ({
   label,
   primaryValue,
-  compareValue,
   momRate,
-  yoyRate,
+  isCompareCard,
+  primaryTotal,
 }) => {
-  const hasCompare = compareValue !== undefined;
-  const absDiff = hasCompare ? primaryValue - compareValue! : null;
+  // 비교 카드: primaryValue = 비교 기간 총 비용, primaryTotal = 기준 기간 총 비용
+  const absDiff = isCompareCard && primaryTotal !== undefined ? primaryTotal - primaryValue : null;
+  const diffRate = absDiff !== null && primaryValue !== 0 ? absDiff / primaryValue : null;
+
+  const cardClass = isCompareCard
+    ? 'bg-gray-100 dark:bg-gray-700/60 rounded-xl shadow p-5 flex flex-col gap-2 min-w-[180px] border border-gray-200 dark:border-gray-600'
+    : 'bg-white dark:bg-gray-800 rounded-xl shadow p-5 flex flex-col gap-2 min-w-[180px]';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-5 flex flex-col gap-2 min-w-[180px]">
+    <div className={cardClass}>
       <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</span>
 
       <span className="text-2xl font-bold text-gray-900 dark:text-white">
         {formatKRW(primaryValue)}
       </span>
 
-      {/* Compare value row */}
-      {hasCompare && (
-        <div className="flex flex-col gap-0.5 text-sm">
-          <span className="text-gray-500 dark:text-gray-400">
-            비교: {formatKRW(compareValue!)}
+      {/* 비교 카드 하단: 차이 금액 + 비율 */}
+      {isCompareCard && absDiff !== null && diffRate !== null && (
+        <div className="text-sm mt-1">
+          <span className="text-gray-500 dark:text-gray-400 mr-1">차이</span>
+          <span className={rateColor(absDiff)}>
+            {absDiff > 0 ? '+' : ''}{formatKRW(absDiff)}
           </span>
-          {absDiff !== null && (
-            <span className={rateColor(absDiff)}>
-              차이: {absDiff > 0 ? '+' : ''}{formatKRW(absDiff)}
-            </span>
-          )}
+          <span className={`ml-1 ${rateColor(absDiff)}`}>
+            ({formatRate(diffRate)})
+          </span>
         </div>
       )}
 
@@ -63,18 +69,6 @@ const KPICard: React.FC<KPICardProps> = ({
             <span className="text-gray-400 dark:text-gray-500">비교 데이터 없음</span>
           ) : (
             <span className={rateColor(momRate)}>{formatRate(momRate)}</span>
-          )}
-        </div>
-      )}
-
-      {/* YoY rate */}
-      {yoyRate !== undefined && (
-        <div className="text-sm">
-          <span className="text-gray-500 dark:text-gray-400 mr-1">YoY</span>
-          {yoyRate === null ? (
-            <span className="text-gray-400 dark:text-gray-500">비교 데이터 없음</span>
-          ) : (
-            <span className={rateColor(yoyRate)}>{formatRate(yoyRate)}</span>
           )}
         </div>
       )}

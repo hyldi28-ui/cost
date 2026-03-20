@@ -3,6 +3,37 @@ import type { CostRecord, ParseResult, ParseError } from '../types';
 
 const REQUIRED_COLUMNS = ['date', 'account', 'platform', 'category', 'amount'] as const;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const MON_YEAR_REGEX = /^([A-Za-z]{3})-(\d{2})$/;   // Jan-25
+const YEAR_MON_REGEX = /^(\d{2})-([A-Za-z]{3})$/;   // 25-Jan
+
+const MONTH_MAP: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  // 오타 보정
+  aus: '08',
+};
+
+function normalizeDate(raw: string): string | null {
+  if (DATE_REGEX.test(raw)) return raw;
+
+  // Jan-25 형식
+  const m1 = raw.match(MON_YEAR_REGEX);
+  if (m1) {
+    const month = MONTH_MAP[m1[1].toLowerCase()];
+    const year = parseInt(m1[2]) >= 50 ? '19' + m1[2] : '20' + m1[2];
+    if (month) return `${year}-${month}-01`;
+  }
+
+  // 25-Jan 형식
+  const m2 = raw.match(YEAR_MON_REGEX);
+  if (m2) {
+    const month = MONTH_MAP[m2[2].toLowerCase()];
+    const year = parseInt(m2[1]) >= 50 ? '19' + m2[1] : '20' + m2[1];
+    if (month) return `${year}-${month}-01`;
+  }
+
+  return null;
+}
 
 function validateColumns(headers: string[]): string[] {
   return REQUIRED_COLUMNS.filter((col) => !headers.includes(col));
@@ -19,14 +50,16 @@ function processRows(
     const row = rows[i];
     const rawStr = headers.map((h) => row[h] ?? '').join(',');
 
-    const date = (row['date'] ?? '').trim();
-    if (!DATE_REGEX.test(date)) {
+    const rawDate = (row['date'] ?? '').trim();
+    const date = normalizeDate(rawDate);
+    if (!date) {
       errors.push({ row: i + 2, reason: 'invalid_date', raw: rawStr });
       continue;
     }
 
     const amountRaw = (row['amount'] ?? '').trim();
-    const amount = Number(amountRaw);
+    // 쉼표 제거 후 숫자 변환 (예: "1,234,567" → 1234567)
+    const amount = Number(amountRaw.replace(/,/g, ''));
     if (!isFinite(amount) || amountRaw === '') {
       errors.push({ row: i + 2, reason: 'invalid_amount', raw: rawStr });
       continue;
@@ -38,6 +71,7 @@ function processRows(
       platform: (row['platform'] ?? '').trim(),
       category: (row['category'] ?? '').trim(),
       amount,
+      memo: (row['적요'] ?? '').trim(),
     });
   }
 

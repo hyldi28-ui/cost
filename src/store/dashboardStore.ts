@@ -4,9 +4,9 @@ import type { DashboardStore, FilterState } from '../types';
 const initialFilterState: FilterState = {
   primaryRange: { start: '2020-01', end: '2099-12' },
   compareRange: null,
-  accounts: [],
-  platforms: [],
-  categories: [],
+  accounts: null,
+  platforms: null,
+  categories: null,
 };
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
