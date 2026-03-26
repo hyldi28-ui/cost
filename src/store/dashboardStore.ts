@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { DashboardStore, FilterState } from '../types';
 
 const initialFilterState: FilterState = {
-  primaryRange: { start: '2020-01', end: '2099-12' },
+  primaryRange: { start: '2025-01', end: '2025-02' },
   compareRange: null,
   accounts: null,
   platforms: null,

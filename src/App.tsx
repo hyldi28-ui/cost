@@ -4,7 +4,6 @@ import { aggregateByMonth, aggregateByDimension, calculateTopN } from "./lib/agg
 import { parseCSVString } from "./lib/csvParser";
 import ThemeToggle from "./components/ThemeToggle";
 import FilterPanel from "./components/FilterPanel";
-import KPISection from "./components/KPISection";
 import TrendChart from "./components/TrendChart";
 import BarChartSection from "./components/BarChartSection";
 import DonutChart from "./components/DonutChart";
@@ -14,10 +13,10 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import SkeletonCard from "./components/SkeletonCard";
 import type { DonutSegment } from "./types";
 
-const SHEET_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSrfUf90ETlX0xLhimPW9yyutyK0GPOZ_DtZUK4IQVzRB6KpFZfGWUMXgU0l6MoQ_FEEghNC1PAr3ux/pub?gid=2097962772&single=true&output=csv";
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSrfUf90ETlX0xLhimPW9yyutyK0GPOZ_DtZUK4IQVzRB6KpFZfGWUMXgU0l6MoQ_FEEghNC1PAr3ux/pub?gid=2097962772&single=true&output=csv";
+const CHART_COLORS = ["#3b82f6","#f97316","#10b981","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#84cc16","#ec4899","#6366f1"];
 
-function msUntilNextSixAM(): number {
+function msUntilNextSixAM() {
   const now = new Date();
   const next = new Date(now);
   next.setHours(6, 0, 0, 0);
@@ -51,20 +50,16 @@ function App() {
   }, [setRecords, setLoading]);
 
   useEffect(() => { loadSheet(); }, [loadSheet]);
-
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
     const timeoutId = setTimeout(() => {
       loadSheet();
       intervalId = setInterval(loadSheet, 24 * 60 * 60 * 1000);
     }, msUntilNextSixAM());
-    return () => {
-      clearTimeout(timeoutId);
-      clearInterval(intervalId);
-    };
+    return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
   }, [loadSheet]);
 
-  const { primarySeries, compareSeries, topNItems, donutData, compareDonutData } = useMemo(() => {
+  const { primarySeries, compareSeries, topNItems, donutData, compareDonutData, colorMap } = useMemo(() => {
     const primarySeries = aggregateByMonth(records, filterState);
     const compareSeries = filterState.compareRange
       ? aggregateByMonth(records, { ...filterState, primaryRange: filterState.compareRange })
@@ -76,7 +71,10 @@ function App() {
     const topNItems = filterState.compareRange ? calculateTopN(primaryDimAgg, compareDimAgg) : [];
     const donutData: DonutSegment[] = primaryDimAgg.map((d) => ({ label: d.dimension, amount: d.amount, share: d.share }));
     const compareDonutData: DonutSegment[] = compareDimAgg.map((d) => ({ label: d.dimension, amount: d.amount, share: d.share }));
-    return { primarySeries, compareSeries, topNItems, donutData, compareDonutData };
+    const allLabels = [...new Set([...primaryDimAgg.map(d => d.dimension), ...compareDimAgg.map(d => d.dimension)])];
+    const colorMap: Record<string, string> = {};
+    allLabels.forEach((label, i) => { colorMap[label] = CHART_COLORS[i % CHART_COLORS.length]; });
+    return { primarySeries, compareSeries, topNItems, donutData, compareDonutData, colorMap };
   }, [records, filterState]);
 
   const filteredRecords = useMemo(() => {
@@ -104,38 +102,22 @@ function App() {
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-400 dark:text-gray-500">매일 오전 6시 자동 갱신</p>
           <div className="flex items-center gap-2">
-            <button
-              onClick={loadSheet}
-              className="px-3 py-1.5 text-xs rounded bg-blue-500 hover:bg-blue-600 text-white transition-colors"
-            >
-              지금 새로고침
-            </button>
+            <button onClick={loadSheet} className="px-3 py-1.5 text-xs rounded bg-blue-500 hover:bg-blue-600 text-white transition-colors">지금 새로고침</button>
             <ThemeToggle />
           </div>
         </div>
-
         {isLoading && records.length === 0 && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-gray-500 dark:text-gray-400">구글 시트에서 데이터를 불러오는 중...</p>
           </div>
         )}
-
         {records.length > 0 && (
           <div className="space-y-6">
             <FilterPanel />
             <div>
-              {isLoading ? (
-                <div className="flex flex-wrap gap-4">
-                  <SkeletonCard height="h-28" /><SkeletonCard height="h-28" /><SkeletonCard height="h-28" />
-                </div>
-              ) : <KPISection />}
-            </div>
-            <div>
               {isLoading ? <SkeletonCard height="h-72" /> : (
-                <ErrorBoundary>
-                  <TrendChart primarySeries={primarySeries} compareSeries={compareSeries} />
-                </ErrorBoundary>
+                <ErrorBoundary><TrendChart primarySeries={primarySeries} compareSeries={compareSeries} /></ErrorBoundary>
               )}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -149,11 +131,11 @@ function App() {
                   <ErrorBoundary>
                     {hasCompare ? (
                       <div className="grid grid-cols-2 gap-3">
-                        <DonutChart data={donutData} title="기준기간" onSegmentClick={handleSegmentClick} />
-                        <DonutChart data={compareDonutData} title="비교기간" onSegmentClick={handleSegmentClick} />
+                        <DonutChart data={donutData} title="기준기간" colorMap={colorMap} onSegmentClick={handleSegmentClick} />
+                        <DonutChart data={compareDonutData} title="비교기간" colorMap={colorMap} onSegmentClick={handleSegmentClick} />
                       </div>
                     ) : (
-                      <DonutChart data={donutData} onSegmentClick={handleSegmentClick} />
+                      <DonutChart data={donutData} colorMap={colorMap} onSegmentClick={handleSegmentClick} />
                     )}
                   </ErrorBoundary>
                 )}
@@ -167,9 +149,7 @@ function App() {
               </div>
               <div>
                 {isLoading ? <SkeletonCard height="h-64" /> : (
-                  <ErrorBoundary>
-                    <MemoByCategory records={filteredRecords} />
-                  </ErrorBoundary>
+                  <ErrorBoundary><MemoByCategory records={filteredRecords} /></ErrorBoundary>
                 )}
               </div>
             </div>

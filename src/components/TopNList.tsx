@@ -19,7 +19,7 @@ function formatAmount(value: number): string {
 }
 
 function formatRate(rate: number): string {
-  if (!isFinite(rate)) return '+∞%';
+  if (!isFinite(rate)) return '신규';
   const sign = rate >= 0 ? '+' : '';
   return `${sign}${(rate * 100).toFixed(1)}%`;
 }
